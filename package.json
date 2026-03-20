@@ -13,7 +13,7 @@
     "commands": [
       {
         "command": "nginx-viewer.open",
-        "title": "Open in Nginx Viewer"
+        "title": "%command.open.title%"
       }
     ],
     "menus": {

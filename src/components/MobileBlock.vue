@@ -8,16 +8,17 @@
         </svg>
       </div>
       <h1 class="title">nginx Viewer</h1>
-      <p class="message">
-        이 서비스는 PC 환경에서<br>최적화되어 있습니다.
-      </p>
-      <p class="submessage">
-        데스크탑 또는 노트북 브라우저에서<br>접속해 주세요.
-      </p>
+      <p class="message" v-html="t('mobile_message')"></p>
+      <p class="submessage" v-html="t('mobile_submessage')"></p>
       <div class="url-badge">toolzy.site/nginx</div>
     </div>
   </div>
 </template>
+
+<script setup>
+import { useI18n } from '../i18n/index.js'
+const { t } = useI18n()
+</script>
 
 <style scoped>
 .mobile-block {

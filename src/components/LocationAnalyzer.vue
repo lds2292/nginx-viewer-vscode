@@ -3,24 +3,24 @@
 
     <!-- Toolbar: URL Test -->
     <div class="global-test-panel">
-      <div class="global-test-header">전역 URL 테스트</div>
+      <div class="global-test-header">{{ t('global_test_title') }}</div>
       <div class="global-input-wrap">
         <div class="match-input-row">
           <input
             v-model="globalUrl"
             class="match-input"
-            placeholder="https://example.com/api/users"
+            :placeholder="t('global_test_placeholder')"
             spellcheck="false"
             @keydown.enter="doGlobalTest"
             @input="globalResult = null"
           />
-          <button class="btn-test" @click="doGlobalTest">테스트</button>
+          <button class="btn-test" @click="doGlobalTest">{{ t('btn_test') }}</button>
           <button v-if="globalResult" class="btn-clear" @click="globalResult = null; globalUrl = ''">✕</button>
         </div>
       </div>
       <div v-if="globalResult" class="global-results">
         <div v-if="globalResult.results.length === 0" class="global-miss">
-          매칭되는 서버 블록이 없습니다.
+          {{ t('global_no_match') }}
         </div>
         <div
           v-for="(r, i) in globalResult.results" :key="i"
@@ -39,7 +39,7 @@
               location <span class="hl-loc-path">{{ r.srv.locations[r.locResult.index]?.path }}</span>
               — {{ r.locResult.reason }}
             </template>
-            <template v-else>location 매칭 없음</template>
+            <template v-else>{{ t('loc_no_match') }}</template>
           </div>
         </div>
       </div>
@@ -52,19 +52,19 @@
         ref="searchInputRef"
         v-model="searchQuery"
         class="search-input"
-        placeholder="path, proxy_pass, alias 등으로 검색..."
+        :placeholder="t('search_placeholder')"
         spellcheck="false"
         @keydown.escape="clearSearch"
       />
       <span v-if="searchQuery" class="search-count">
-        {{ searchMatchCount }}개 매칭
+        {{ t('search_count', { n: searchMatchCount }) }}
       </span>
       <button v-if="searchQuery" class="btn-clear" @click="searchQuery = ''">✕</button>
     </div>
 
     <div v-if="servers.length === 0" class="empty">
       <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#3a3a4f" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-      <p>서버 블록 또는 location이 없습니다.</p>
+      <p>{{ t('loc_empty') }}</p>
     </div>
 
     <div
@@ -79,13 +79,13 @@
         <span class="server-name">{{ srv.serverNames.join(', ') || '(unnamed)' }}</span>
         <span v-if="srv.listens.length" class="server-listen">{{ srv.listens.join(', ') }}</span>
         <span class="loc-count-badge">
-          {{ searchQuery ? `${filteredLocs[si]?.length ?? 0} / ` : '' }}{{ srv.locations.length }} locations
+          {{ searchQuery ? `${filteredLocs[si]?.length ?? 0} / ` : '' }}{{ t('loc_count', { n: srv.locations.length }) }}
         </span>
       </div>
 
       <template v-if="expandedServers[si]">
         <!-- Location list -->
-        <div v-if="srv.locations.length === 0" class="no-locations">location 블록이 없습니다.</div>
+        <div v-if="srv.locations.length === 0" class="no-locations">{{ t('no_locations') }}</div>
         <div v-else class="location-list">
           <div
             v-for="(loc, li) in annotated[si]"
@@ -118,7 +118,7 @@
               <span class="loc-path">{{ loc.path }}</span>
 
               <!-- Duplicate indicator -->
-              <span v-if="loc.duplicate" class="dup-tag">중복 패턴</span>
+              <span v-if="loc.duplicate" class="dup-tag">{{ t('dup_tag') }}</span>
 
               <!-- Expand button -->
               <button
@@ -126,14 +126,14 @@
                 class="loc-expand-btn"
                 :class="{ active: expandedLocs[`${si}-${li}`] }"
                 @click.stop="toggleLoc(si, li)"
-              >{{ expandedLocs[`${si}-${li}`] ? '닫기' : '상세' }}</button>
+              >{{ expandedLocs[`${si}-${li}`] ? t('btn_close') : t('btn_detail') }}</button>
 
               <!-- Delete button -->
               <button
                 v-if="deleteNode && loc.node"
                 class="loc-delete-btn"
                 @click.stop="confirmDelete(loc.node, loc.path)"
-              >삭제</button>
+              >{{ t('btn_delete') }}</button>
             </div>
             <div class="loc-meta">
               <span class="eval-note">{{ loc.evalNote }}</span>
@@ -167,9 +167,9 @@
         @mouseleave="hideTooltip"
       >
         <div class="dir-tooltip-desc">{{ tooltip.desc }}</div>
-        <div v-if="tooltip.default" class="dir-tooltip-default">기본값: <code>{{ tooltip.default }}</code></div>
-        <div v-if="!tooltip.doc" class="dir-tooltip-na">공식 문서: N/A</div>
-        <a v-else :href="tooltip.doc" target="_blank" class="dir-tooltip-link">공식 문서 ↗</a>
+        <div v-if="tooltip.default" class="dir-tooltip-default">{{ t('default_label') }} <code>{{ tooltip.default }}</code></div>
+        <div v-if="!tooltip.doc" class="dir-tooltip-na">{{ t('doc_na') }}</div>
+        <a v-else :href="tooltip.doc" target="_blank" class="dir-tooltip-link">{{ t('doc_link') }}</a>
       </div>
     </Teleport>
 
@@ -179,16 +179,16 @@
         <div class="delete-modal">
           <div class="delete-modal-header">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
-            <span>Location 삭제</span>
+            <span>{{ t('delete_modal_title') }}</span>
           </div>
           <div class="delete-modal-body">
-            <p class="delete-modal-desc">다음 location을 nginx.conf에서 삭제합니다.</p>
+            <p class="delete-modal-desc">{{ t('delete_modal_desc') }}</p>
             <div class="delete-modal-path">{{ deleteTarget?.path }}</div>
-            <p class="delete-modal-warn">이 작업은 되돌릴 수 없습니다.</p>
+            <p class="delete-modal-warn">{{ t('delete_modal_warn') }}</p>
           </div>
           <div class="delete-modal-actions">
-            <button class="delete-modal-cancel" @click="cancelDelete">취소</button>
-            <button class="delete-modal-confirm" @click="doDelete">삭제</button>
+            <button class="delete-modal-cancel" @click="cancelDelete">{{ t('btn_cancel') }}</button>
+            <button class="delete-modal-confirm" @click="doDelete">{{ t('btn_delete') }}</button>
           </div>
         </div>
       </div>
@@ -196,7 +196,7 @@
 
     <!-- Legend -->
     <div class="legend">
-      <span class="legend-title">우선순위:</span>
+      <span class="legend-title">{{ t('legend_priority') }}</span>
       <span v-for="(info, mod) in MODIFIER_LABELS" :key="mod" class="legend-item" :style="{ color: info.color }">
         <code>{{ info.symbol || '∅' }}</code> {{ info.label }}
       </span>
@@ -206,8 +206,11 @@
 
 <script setup>
 import { ref, computed, watch, inject } from 'vue'
+import { useI18n } from '../i18n/index.js'
 import { analyzeLocations, matchLocation, annotateEvaluationOrder, MODIFIER_LABELS } from '../utils/locationAnalyzer.js'
 import { DIRECTIVE_DOCS } from '../utils/directiveDocs.js'
+
+const { t } = useI18n()
 
 const props = defineProps({
   ast: { type: Array, required: true },

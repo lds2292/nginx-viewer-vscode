@@ -56,11 +56,12 @@ function activate(context) {
       `<meta charset="UTF-8" />\n    <meta http-equiv="Content-Security-Policy" content="${csp}">`
     );
 
-    // Inject VS Code flag and file content before </head>
+    // Inject VS Code flag, locale, and file content before </head>
+    const locale = vscode.env.language;
     const fileContent = fs.readFileSync(filePath, 'utf8').replace(/`/g, '\\`');
     html = html.replace(
       '</head>',
-      `<script>window.__vscode_webview__ = true; window.__nginx_initial_content__ = \`${fileContent}\`</script>\n  </head>`
+      `<script>window.__vscode_webview__ = true; window.__vscode_locale__ = '${locale}'; window.__nginx_initial_content__ = \`${fileContent}\`</script>\n  </head>`
     );
 
     panel.webview.html = html;

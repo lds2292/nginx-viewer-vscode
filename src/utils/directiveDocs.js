@@ -340,4 +340,152 @@ export const DIRECTIVE_DOCS = {
     default: null,
     doc: 'https://nginx.org/en/docs/http/ngx_http_upstream_module.html#zone',
   },
+  // ── HTTP 기본 ────────────────────────────────────────────────
+  include: {
+    desc: '다른 설정 파일 또는 파일 글로브 패턴을 현재 설정에 포함합니다. 설정 분리 및 재사용에 사용됩니다.',
+    default: null,
+    doc: 'https://nginx.org/en/docs/ngx_core_module.html#include',
+  },
+  default_type: {
+    desc: '응답의 기본 MIME 타입을 설정합니다. Content-Type 헤더로 전송되며, mime.types에 없는 파일에 적용됩니다.',
+    default: 'text/plain',
+    doc: 'https://nginx.org/en/docs/http/ngx_http_core_module.html#default_type',
+  },
+  // ── 성능 / OS ────────────────────────────────────────────────
+  sendfile: {
+    desc: 'sendfile() 시스템 콜을 사용하여 파일을 전송할지 여부. 정적 파일 서비스 성능을 향상시킵니다.',
+    default: 'off',
+    doc: 'https://nginx.org/en/docs/http/ngx_http_core_module.html#sendfile',
+  },
+  tcp_nopush: {
+    desc: 'sendfile 사용 시 TCP_CORK 옵션을 활성화합니다. 응답 헤더와 파일 시작 부분을 하나의 패킷으로 전송하여 효율을 높입니다.',
+    default: 'off',
+    doc: 'https://nginx.org/en/docs/http/ngx_http_core_module.html#tcp_nopush',
+  },
+  tcp_nodelay: {
+    desc: 'TCP_NODELAY 옵션을 활성화하여 작은 패킷을 즉시 전송합니다. keep-alive 연결 상태로 전환될 때 적용됩니다.',
+    default: 'on',
+    doc: 'https://nginx.org/en/docs/http/ngx_http_core_module.html#tcp_nodelay',
+  },
+  reset_timedout_connection: {
+    desc: '시간 초과된 연결을 RST 패킷으로 강제 종료할지 여부. TIME_WAIT 상태의 소켓을 빠르게 해제합니다.',
+    default: 'off',
+    doc: 'https://nginx.org/en/docs/http/ngx_http_core_module.html#reset_timedout_connection',
+  },
+  worker_rlimit_nofile: {
+    desc: '워커 프로세스가 열 수 있는 최대 파일 수(RLIMIT_NOFILE) 제한. 메인 프로세스 재시작 없이 제한을 늘릴 수 있습니다.',
+    default: null,
+    doc: 'https://nginx.org/en/docs/ngx_core_module.html#worker_rlimit_nofile',
+  },
+  use: {
+    desc: '이벤트 처리 방식을 지정합니다. Linux에서는 epoll이 최적입니다.',
+    default: null,
+    doc: 'https://nginx.org/en/docs/ngx_core_module.html#use',
+  },
+  multi_accept: {
+    desc: 'on으로 설정 시 워커 프로세스가 한 번에 여러 새 연결을 수락합니다.',
+    default: 'off',
+    doc: 'https://nginx.org/en/docs/ngx_core_module.html#multi_accept',
+  },
+  // ── 버퍼 / 헤더 ─────────────────────────────────────────────
+  client_body_buffer_size: {
+    desc: '클라이언트 요청 본문을 읽기 위한 버퍼 크기. 초과 시 임시 파일에 기록됩니다.',
+    default: '8k|16k',
+    doc: 'https://nginx.org/en/docs/http/ngx_http_core_module.html#client_body_buffer_size',
+  },
+  client_header_buffer_size: {
+    desc: '클라이언트 요청 헤더를 읽기 위한 버퍼 크기. 대부분의 요청에는 1k로 충분합니다.',
+    default: '1k',
+    doc: 'https://nginx.org/en/docs/http/ngx_http_core_module.html#client_header_buffer_size',
+  },
+  large_client_header_buffers: {
+    desc: '대용량 클라이언트 요청 헤더를 읽기 위한 최대 버퍼 수와 크기. 초과 시 414/400 오류를 반환합니다.',
+    default: '4 8k',
+    doc: 'https://nginx.org/en/docs/http/ngx_http_core_module.html#large_client_header_buffers',
+  },
+  client_header_timeout: {
+    desc: '클라이언트 요청 헤더를 읽기 위한 타임아웃. 초과 시 408 오류로 요청이 종료됩니다.',
+    default: '60s',
+    doc: 'https://nginx.org/en/docs/http/ngx_http_core_module.html#client_header_timeout',
+  },
+  charset: {
+    desc: '응답의 Content-Type 헤더에 추가할 문자 인코딩. off로 비활성화 가능합니다.',
+    default: 'off',
+    doc: 'https://nginx.org/en/docs/http/ngx_http_charset_module.html#charset',
+  },
+  server_tokens: {
+    desc: '에러 페이지와 Server 응답 헤더에 nginx 버전 정보를 포함할지 여부. 보안상 off 권장.',
+    default: 'on',
+    doc: 'https://nginx.org/en/docs/http/ngx_http_core_module.html#server_tokens',
+  },
+  // ── Gzip 상세 ────────────────────────────────────────────────
+  gzip_vary: {
+    desc: "gzip 활성화 시 응답에 'Vary: Accept-Encoding' 헤더를 추가합니다. 프록시 캐시가 압축 여부에 따라 응답을 구분하도록 돕습니다.",
+    default: 'off',
+    doc: 'https://nginx.org/en/docs/http/ngx_http_gzip_module.html#gzip_vary',
+  },
+  gzip_proxied: {
+    desc: '프록시된 요청에 대해 응답 헤더 조건에 따라 gzip 압축을 활성화합니다. any로 설정 시 모든 프록시 응답에 적용.',
+    default: 'off',
+    doc: 'https://nginx.org/en/docs/http/ngx_http_gzip_module.html#gzip_proxied',
+  },
+  gzip_comp_level: {
+    desc: 'gzip 압축 수준 (1~9). 값이 높을수록 압축률은 높아지나 CPU 사용량도 증가합니다.',
+    default: '1',
+    doc: 'https://nginx.org/en/docs/http/ngx_http_gzip_module.html#gzip_comp_level',
+  },
+  gzip_buffers: {
+    desc: '응답을 gzip 압축하는 데 사용할 버퍼의 수와 크기.',
+    default: '32 4k|16 8k',
+    doc: 'https://nginx.org/en/docs/http/ngx_http_gzip_module.html#gzip_buffers',
+  },
+  gzip_http_version: {
+    desc: 'gzip 압축을 적용할 최소 HTTP 프로토콜 버전.',
+    default: '1.1',
+    doc: 'https://nginx.org/en/docs/http/ngx_http_gzip_module.html#gzip_http_version',
+  },
+  gzip_min_length: {
+    desc: 'gzip 압축을 적용할 응답의 최소 길이 (Content-Length 기준).',
+    default: '20',
+    doc: 'https://nginx.org/en/docs/http/ngx_http_gzip_module.html#gzip_min_length',
+  },
+  // ── Rate Limiting ────────────────────────────────────────────
+  limit_req_zone: {
+    desc: '요청 속도 제한을 위한 공유 메모리 영역과 허용 속도(rate)를 정의합니다. limit_req와 함께 사용.',
+    default: null,
+    doc: 'https://nginx.org/en/docs/http/ngx_http_limit_req_module.html#limit_req_zone',
+  },
+  limit_conn_zone: {
+    desc: '동시 연결 수 제한을 위한 공유 메모리 영역을 정의합니다. limit_conn과 함께 사용.',
+    default: null,
+    doc: 'https://nginx.org/en/docs/http/ngx_http_limit_conn_module.html#limit_conn_zone',
+  },
+  // ── Proxy Cache 전역 ─────────────────────────────────────────
+  proxy_cache_path: {
+    desc: '프록시 캐시 파일을 저장할 경로와 계층 구조, 공유 메모리 영역, 최대 크기 등 캐시 파라미터를 설정합니다.',
+    default: null,
+    doc: 'https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_cache_path',
+  },
+  proxy_cache_key: {
+    desc: '캐시 항목을 식별하는 키를 정의합니다. 변수를 조합하여 요청별 고유한 캐시 키를 생성합니다.',
+    default: '$scheme$proxy_host$request_uri',
+    doc: 'https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_cache_key',
+  },
+  proxy_cache_use_stale: {
+    desc: '업스트림 오류 발생 시 만료된 캐시 응답을 반환할 조건을 지정합니다. (error, timeout, updating 등)',
+    default: 'off',
+    doc: 'https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_cache_use_stale',
+  },
+  // ── 로그 ─────────────────────────────────────────────────────
+  log_format: {
+    desc: '액세스 로그의 출력 형식을 정의합니다. 변수와 이스케이프 방식(default, json, none)을 조합하여 커스텀 형식을 지정합니다.',
+    default: 'combined',
+    doc: 'https://nginx.org/en/docs/http/ngx_http_log_module.html#log_format',
+  },
+  // ── Map ──────────────────────────────────────────────────────
+  map: {
+    desc: '소스 변수 값에 따라 결정되는 새 변수를 생성합니다. 문자열 또는 정규식으로 매핑 조건을 지정합니다.',
+    default: null,
+    doc: 'https://nginx.org/en/docs/http/ngx_http_map_module.html#map',
+  },
 }

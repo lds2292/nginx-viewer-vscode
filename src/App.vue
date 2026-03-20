@@ -19,7 +19,7 @@
             <rect x="1" y="-5.5" width="2.5" height="6" rx="1" fill="#4ade80"/>
           </g>
         </svg>
-        <span class="header-title">nginx Configuration Viewer</span>
+        <span class="header-title">{{ t('header_title') }}</span>
       </div>
       <button class="help-btn" @click="showHelp = true" title="Help">?</button>
     </header>
@@ -29,44 +29,43 @@
       <div v-if="showHelp" class="modal-backdrop" @click.self="showHelp = false">
         <div class="modal">
           <div class="modal-header">
-            <h2>nginx Configuration Viewer — Help</h2>
+            <h2>{{ t('help_title') }}</h2>
             <button class="modal-close" @click="showHelp = false">✕</button>
           </div>
           <div class="modal-body">
             <section>
-              <h3>시작하기</h3>
-              <p>왼쪽 에디터에 nginx.conf 내용을 붙여넣고 <code>Parse &amp; Format</code>을 누르세요. 라인 번호가 함께 표시되며 예시 파일로 빠르게 테스트할 수 있습니다.</p>
+              <h3>{{ t('help_start_title') }}</h3>
+              <p v-html="t('help_start_desc')"></p>
             </section>
 
             <section>
-              <h3>탭 설명</h3>
+              <h3>{{ t('help_tabs_title') }}</h3>
               <ul>
-                <li><code>Formatted</code> — 구문 하이라이팅 + 라인 번호. 들여쓰기(2/4 spaces, Tab) 선택 및 복사 가능</li>
-                <li><code>Tree</code> — 블록 계층 구조 탐색. 노드 클릭 시 원본 위치로 스크롤·선택</li>
-                <li><code>Summary</code> — 서버별 Virtual Host 카드. listen·server_name·주요 directive 표시. directive 이름 hover 시 nginx 공식 문서 툴팁</li>
-                <li><code>Lint</code> — 오류·경고 목록. 탭 배지로 건수 표시. 항목 클릭 시 해당 라인으로 이동</li>
-                <li><code>Locations</code> — location 우선순위 분석, 전역 URL 매칭 테스트, 검색, 삭제</li>
-                <li><code>Diagram</code> — 서버 → 백엔드 연결 시각화. proxy_pass(파란색)·alias(초록색)·upstream 자동 구분</li>
+                <li v-html="t('help_tab_formatted')"></li>
+                <li v-html="t('help_tab_tree')"></li>
+                <li v-html="t('help_tab_summary')"></li>
+                <li v-html="t('help_tab_locations')"></li>
+                <li v-html="t('help_tab_diagram')"></li>
               </ul>
             </section>
 
             <section>
-              <h3>Locations 탭</h3>
+              <h3>{{ t('help_locations_title') }}</h3>
               <ul>
-                <li><strong>전역 URL 테스트</strong> — <code>https://host/path</code> 입력 후 테스트. server_name·포트·location을 nginx 규칙으로 통합 매칭. 결과 클릭 시 해당 location으로 이동</li>
-                <li><strong>검색</strong> — path, directive명(예: <code>proxy_pass</code>), 값으로 실시간 필터. 매칭 서버·location만 표시</li>
-                <li><strong>상세</strong> — location별 설정된 directive 목록 펼치기. 키 hover 시 공식 문서 툴팁</li>
-                <li><strong>삭제</strong> — location 블록을 nginx.conf에서 직접 제거 후 자동 재파싱</li>
-                <li>location 행 클릭 → 원본 에디터의 해당 줄로 스크롤·선택</li>
+                <li v-html="t('help_loc_global_test')"></li>
+                <li v-html="t('help_loc_search')"></li>
+                <li v-html="t('help_loc_detail')"></li>
+                <li v-html="t('help_loc_delete')"></li>
+                <li>{{ t('help_loc_jump') }}</li>
               </ul>
             </section>
 
             <section>
-              <h3>Diagram 탭</h3>
+              <h3>{{ t('help_diagram_title') }}</h3>
               <ul>
-                <li>서버 블록과 proxy_pass·alias 대상을 노드·화살표로 시각화</li>
-                <li>upstream 블록은 멤버 서버 목록과 함께 별도 그룹 노드로 표시</li>
-                <li>노드 클릭 → 연결된 노드·선 강조, 나머지 흐리게 처리. 배경 클릭으로 초기화</li>
+                <li>{{ t('help_diag_visual') }}</li>
+                <li>{{ t('help_diag_upstream') }}</li>
+                <li>{{ t('help_diag_click') }}</li>
               </ul>
             </section>
           </div>
@@ -80,19 +79,22 @@
       <div class="pane pane-left">
         <div class="pane-header">
           <span class="pane-label">nginx.conf</span>
-          <div class="sample-dropdown-wrap" ref="sampleWrapRef">
-            <button class="btn-ghost sample-btn" @click="toggleSampleMenu">예시 불러오기 ▾</button>
-            <div v-if="sampleMenuOpen" class="sample-menu">
-              <button
-                v-for="s in SAMPLES"
-                :key="s.key"
-                class="sample-item"
-                @click="loadSample(s)"
-              >{{ s.label }}</button>
+          <div class="pane-header-actions">
+            <div class="sample-dropdown-wrap" ref="sampleWrapRef">
+              <button class="btn-sample" @click="toggleSampleMenu">{{ t('sample_load') }}</button>
+              <div v-if="sampleMenuOpen" class="sample-menu">
+                <button
+                  v-for="s in SAMPLES"
+                  :key="s.key"
+                  class="sample-item"
+                  @click="loadSample(s)"
+                >{{ s.label }}</button>
+              </div>
             </div>
+            <button class="btn-clear" @click="clearInput">{{ t('btn_clear') }}</button>
           </div>
-          <button class="btn-ghost" @click="clearInput" title="지우기">지우기</button>
         </div>
+
         <div class="input-editor-wrap">
           <div class="line-gutter" ref="lineGutterRef">
             <div v-for="n in lineCount" :key="n" class="ln">{{ n }}</div>
@@ -101,7 +103,7 @@
             ref="inputRef"
             v-model="input"
             class="input-area"
-            placeholder="여기에 nginx.conf 내용을 붙여넣으세요..."
+            :placeholder="t('input_placeholder')"
             spellcheck="false"
             @scroll="onInputScroll"
           ></textarea>
@@ -113,7 +115,7 @@
             </svg>
             Parse &amp; Format
           </button>
-          <span v-if="parsed && !error" class="stat-text">{{ nodeCount }} 노드</span>
+          <span v-if="parsed && !error" class="stat-text">{{ t('stat_nodes', { n: nodeCount }) }}</span>
         </div>
       </div>
 
@@ -153,7 +155,7 @@
               >{{ opt.label }}</button>
             </div>
             <button class="btn-ghost copy-btn" @click="copyFormatted">
-              {{ copied ? '✓ 복사됨' : '복사' }}
+              {{ copied ? t('btn_copied') : t('btn_copy') }}
             </button>
           </template>
         </div>
@@ -164,13 +166,33 @@
             <polyline points="16 18 22 12 16 6"/>
             <polyline points="8 6 2 12 8 18"/>
           </svg>
-          <p>nginx.conf를 붙여넣고<br>Parse &amp; Format을 누르세요</p>
+          <p v-html="t('placeholder_paste')"></p>
         </div>
 
+        <!-- Find Bar (Formatted tab) -->
+        <Transition name="find">
+          <div v-if="findOpen && parsed && !error && activeTab === 'formatted'" class="find-bar">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input
+              ref="findInputRef"
+              v-model="findQuery"
+              class="find-input"
+              :placeholder="t('find_placeholder')"
+              @keydown.enter.exact.prevent="findNext"
+              @keydown.shift.enter.prevent="findPrev"
+              @keydown.escape.prevent="closeFindBar"
+            />
+            <span class="find-count" :class="{ 'find-count-empty': findQuery && !findMatches.length }">{{ findCountText }}</span>
+            <button class="find-nav" @click="findPrev" :disabled="!findMatches.length" title="Previous">↑</button>
+            <button class="find-nav" @click="findNext" :disabled="!findMatches.length" title="Next">↓</button>
+            <button class="find-close" @click="closeFindBar">✕</button>
+          </div>
+        </Transition>
+
         <!-- Formatted Tab -->
-        <div v-if="parsed && !error && activeTab === 'formatted'" class="output-area formatted-area">
+        <div v-if="parsed && !error && activeTab === 'formatted'" class="output-area formatted-area" ref="formattedAreaRef">
           <div class="code-with-lines">
-            <div v-for="(line, i) in highlightedLines" :key="i" class="code-line">
+            <div v-for="(line, i) in highlightedLinesWithSearch" :key="i" class="code-line">
               <span class="line-num">{{ i + 1 }}</span>
               <span class="line-content" v-html="line"></span>
             </div>
@@ -185,11 +207,6 @@
         <!-- Summary Tab -->
         <div v-if="parsed && !error && activeTab === 'summary'" class="output-area summary-area">
           <SummaryView :summary="summaryData" />
-        </div>
-
-        <!-- Lint Tab -->
-        <div v-if="parsed && !error && activeTab === 'lint'" class="output-area summary-area">
-          <LintView :issues="lintIssues" />
         </div>
 
         <!-- Locations Tab -->
@@ -207,17 +224,17 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, provide } from 'vue'
+import { ref, computed, onMounted, provide, watch, nextTick } from 'vue'
+import { useI18n } from './i18n/index.js'
 import MobileBlock from './components/MobileBlock.vue'
 import { parse, format, highlight, summarize } from './utils/nginxParser.js'
-import { lint } from './utils/nginxLint.js'
 import { SAMPLES } from './utils/nginxSamples.js'
 import TreeNode from './components/TreeNode.vue'
 import SummaryView from './components/SummaryView.vue'
-import LintView from './components/LintView.vue'
 import LocationAnalyzer from './components/LocationAnalyzer.vue'
 import DiagramView from './components/DiagramView.vue'
 
+const { t } = useI18n()
 const isMobile = ref(false)
 const showHelp = ref(false)
 const sampleMenuOpen = ref(false)
@@ -236,14 +253,13 @@ const parsed = ref(false)
 const error = ref(null)
 const ast = ref([])
 const summaryData = ref(null)
-const lintIssues = ref([])
 const activeTab = ref('formatted')
 const copied = ref(false)
 
 const indentOptions = [
-  { label: '2 spaces', value: '  ' },
-  { label: '4 spaces', value: '    ' },
-  { label: 'Tab',      value: '\t' },
+  { label: t('indent_2'), value: '  ' },
+  { label: t('indent_4'), value: '    ' },
+  { label: t('indent_tab'), value: '\t' },
 ]
 const indentStr = ref('  ')
 
@@ -330,14 +346,10 @@ function deleteNode(node) {
 }
 provide('deleteNode', deleteNode)
 
-const lintErrorCount = computed(() => lintIssues.value.filter(i => i.severity === 'error').length)
-const lintWarnCount  = computed(() => lintIssues.value.filter(i => i.severity === 'warning').length)
-
 const tabs = computed(() => [
   { key: 'formatted',  label: 'Formatted' },
   { key: 'tree',       label: 'Tree' },
   { key: 'summary',    label: 'Summary' },
-  { key: 'lint',       label: 'Lint', badge: lintErrorCount.value || lintWarnCount.value || null, badgeColor: lintErrorCount.value ? 'error' : 'warning' },
   { key: 'locations',  label: 'Locations' },
   { key: 'diagram',    label: 'Diagram' },
 ])
@@ -366,7 +378,6 @@ function run() {
 
   ast.value = result.ast
   summaryData.value = summarize(result.ast)
-  lintIssues.value = lint(result.ast)
   parsed.value = true
 }
 
@@ -375,7 +386,6 @@ function clearInput() {
   parsed.value = false
   error.value = null
   ast.value = []
-  lintIssues.value = []
 }
 
 async function copyFormatted() {
@@ -396,8 +406,141 @@ function loadSample(s) {
   run()
 }
 
+// ── Find (Formatted tab) ──────────────────────────────────────
+const findOpen      = ref(false)
+const findQuery     = ref('')
+const findInputRef  = ref(null)
+const findCurrentIdx = ref(-1)
+const formattedAreaRef = ref(null)
+
+// Find all matches (line index + char offset within line)
+const findMatches = computed(() => {
+  if (!findQuery.value || !formattedCode.value) return []
+  const q = findQuery.value.toLowerCase()
+  const lines = formattedCode.value.split('\n')
+  const matches = []
+  for (let li = 0; li < lines.length; li++) {
+    const lower = lines[li].toLowerCase()
+    let ci = lower.indexOf(q)
+    while (ci !== -1) {
+      matches.push({ li, ci })
+      ci = lower.indexOf(q, ci + 1)
+    }
+  }
+  return matches
+})
+
+const findCountText = computed(() => {
+  if (!findQuery.value) return ''
+  const total = findMatches.value.length
+  if (total === 0) return t('find_no_match')
+  return `${findCurrentIdx.value >= 0 ? findCurrentIdx.value + 1 : 1} / ${total}`
+})
+
+// Inject <mark> into a highlighted HTML line at given char offsets
+function injectMarks(html, lineMatches, qLen, currentGlobalIdx) {
+  const tmp = document.createElement('div')
+  tmp.innerHTML = html
+  let charOffset = 0
+
+  function walk(node) {
+    if (node.nodeType === Node.TEXT_NODE) {
+      const nodeLen = node.textContent.length
+      // Collect all matches that fall within this text node
+      const localMatches = []
+      for (const m of lineMatches) {
+        const s = m.ci - charOffset
+        if (s >= 0 && s + qLen <= nodeLen) {
+          localMatches.push({ s, e: s + qLen, isCurrent: m.gi === currentGlobalIdx })
+        }
+      }
+      charOffset += nodeLen
+      if (localMatches.length === 0) return
+
+      // Build a single fragment covering all matches in one pass (left to right)
+      localMatches.sort((a, b) => a.s - b.s)
+      const text = node.textContent
+      const frag = document.createDocumentFragment()
+      let pos = 0
+      for (const { s, e, isCurrent } of localMatches) {
+        if (s > pos) frag.appendChild(document.createTextNode(text.slice(pos, s)))
+        const mark = document.createElement('mark')
+        mark.className = isCurrent ? 'search-hl search-hl-cur' : 'search-hl'
+        mark.textContent = text.slice(s, e)
+        frag.appendChild(mark)
+        pos = e
+      }
+      if (pos < text.length) frag.appendChild(document.createTextNode(text.slice(pos)))
+      node.parentNode.replaceChild(frag, node)
+    } else {
+      for (const child of [...node.childNodes]) walk(child)
+    }
+  }
+
+  walk(tmp)
+  return tmp.innerHTML
+}
+
+const highlightedLinesWithSearch = computed(() => {
+  if (!findQuery.value || !findMatches.value.length) return highlightedLines.value
+  const byLine = {}
+  findMatches.value.forEach((m, gi) => {
+    ;(byLine[m.li] ??= []).push({ ...m, gi })
+  })
+  const qLen = findQuery.value.length
+  return highlightedLines.value.map((lineHtml, li) =>
+    byLine[li] ? injectMarks(lineHtml, byLine[li], qLen, findCurrentIdx.value) : lineHtml
+  )
+})
+
+function scrollToCurrentMatch() {
+  nextTick(() => {
+    formattedAreaRef.value?.querySelector('.search-hl-cur')?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+  })
+}
+
+function openFindBar() {
+  findOpen.value = true
+  nextTick(() => findInputRef.value?.focus())
+}
+
+function closeFindBar() {
+  findOpen.value = false
+  findQuery.value = ''
+  findCurrentIdx.value = -1
+}
+
+function findNext() {
+  if (!findMatches.value.length) return
+  findCurrentIdx.value = findCurrentIdx.value < findMatches.value.length - 1
+    ? findCurrentIdx.value + 1 : 0
+  scrollToCurrentMatch()
+}
+
+function findPrev() {
+  if (!findMatches.value.length) return
+  findCurrentIdx.value = findCurrentIdx.value <= 0
+    ? findMatches.value.length - 1 : findCurrentIdx.value - 1
+  scrollToCurrentMatch()
+}
+
+watch(findQuery, () => {
+  findCurrentIdx.value = findMatches.value.length ? 0 : -1
+  scrollToCurrentMatch()
+})
+
 onMounted(() => {
   isMobile.value = !window.__vscode_webview__ && window.innerWidth < 768
+
+  document.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+      if (parsed.value && !error.value && activeTab.value === 'formatted') {
+        e.preventDefault()
+        openFindBar()
+      }
+    }
+    if (e.key === 'Escape' && findOpen.value) closeFindBar()
+  })
 
   document.addEventListener('click', (e) => {
     if (sampleWrapRef.value && !sampleWrapRef.value.contains(e.target)) {
@@ -616,6 +759,117 @@ onMounted(() => {
 }
 
 .btn-ghost:hover { color: #d1d5db; border-color: #3a3a4f; }
+
+.pane-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-sample {
+  background: rgba(56, 189, 248, 0.1);
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  border-radius: 6px;
+  color: #38bdf8;
+  font-size: 12px;
+  padding: 4px 10px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.btn-sample:hover {
+  background: rgba(56, 189, 248, 0.18);
+  border-color: #38bdf8;
+  color: #7dd3fc;
+}
+
+.btn-clear {
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  border-radius: 6px;
+  color: #f59e0b;
+  font-size: 12px;
+  padding: 4px 10px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.btn-clear:hover {
+  background: rgba(245, 158, 11, 0.16);
+  border-color: #f59e0b;
+  color: #fbbf24;
+}
+
+/* Find Bar */
+.find-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  background: #16161d;
+  border-bottom: 1px solid #2a2a3a;
+  flex-shrink: 0;
+  color: #6b7280;
+}
+
+.find-input {
+  flex: 1;
+  min-width: 0;
+  max-width: 240px;
+  background: #0f0f13;
+  border: 1px solid #3a3a4f;
+  border-radius: 5px;
+  color: #d1d5db;
+  font-size: 12px;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  padding: 3px 8px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.find-input:focus { border-color: #4ade80; }
+.find-input::placeholder { color: #3a3a4f; }
+
+.find-count {
+  font-size: 11px;
+  color: #6b7280;
+  white-space: nowrap;
+  min-width: 52px;
+  text-align: center;
+}
+.find-count-empty { color: #ef4444; }
+
+.find-nav {
+  background: none;
+  border: 1px solid #2a2a3a;
+  border-radius: 4px;
+  color: #9ca3af;
+  font-size: 12px;
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: color 0.15s, border-color 0.15s;
+  flex-shrink: 0;
+}
+.find-nav:hover:not(:disabled) { color: #d1d5db; border-color: #4b5563; }
+.find-nav:disabled { opacity: 0.35; cursor: default; }
+
+.find-close {
+  background: none;
+  border: none;
+  color: #6b7280;
+  font-size: 13px;
+  cursor: pointer;
+  padding: 2px 5px;
+  border-radius: 4px;
+  line-height: 1;
+  transition: color 0.15s;
+}
+.find-close:hover { color: #d1d5db; }
+
+.find-enter-active, .find-leave-active { transition: opacity 0.12s, transform 0.12s; }
+.find-enter-from, .find-leave-to { opacity: 0; transform: translateY(-4px); }
 
 /* Error */
 .error-box {
@@ -905,6 +1159,20 @@ onMounted(() => {
 </style>
 
 <style>
+/* Search highlight — unscoped because injected via v-html */
+mark.search-hl {
+  background: rgba(234, 179, 8, 0.3);
+  color: inherit;
+  border-radius: 2px;
+  padding: 0 1px;
+}
+mark.search-hl-cur {
+  background: rgba(234, 179, 8, 0.75);
+  outline: 1px solid #eab308;
+  border-radius: 2px;
+  color: #0f0f13;
+}
+
 /* Syntax highlight classes — unscoped because injected via v-html */
 .code-with-lines .hl-block       { color: #4ade80; font-weight: 700; }
 .code-with-lines .hl-key         { color: #60a5fa; }

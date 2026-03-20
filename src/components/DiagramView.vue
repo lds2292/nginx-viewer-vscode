@@ -8,14 +8,14 @@
         <rect x="14" y="11" width="8" height="10" rx="1"/>
         <path d="M10 8h2a1 1 0 0 1 1 1v5"/>
       </svg>
-      <p>서버 블록이 없습니다.</p>
+      <p>{{ t('diagram_empty') }}</p>
     </div>
 
     <template v-else>
       <!-- Toolbar -->
       <div class="diagram-toolbar">
         <span class="toolbar-stat">
-          {{ data.servers.length }}개 서버 &nbsp;·&nbsp; {{ data.backends.length }}개 백엔드
+          {{ t('diagram_stat', { s: data.servers.length, b: data.backends.length }) }}
         </span>
         <div class="toolbar-legend">
           <span class="leg"><span class="leg-dot" style="background:#f59e0b"></span>HTTPS</span>
@@ -29,8 +29,8 @@
         <div class="diagram-stage" :style="{ width: CANVAS_W + 'px', height: layout.h + 'px' }" @click="selectedId = null">
 
           <!-- Column headers -->
-          <div class="col-hdr" :style="{ left: SRV_X + 'px', width: SRV_W + 'px' }">Virtual Hosts</div>
-          <div class="col-hdr" :style="{ left: BK_X + 'px',  width: BK_W + 'px'  }">Backends</div>
+          <div class="col-hdr" :style="{ left: SRV_X + 'px', width: SRV_W + 'px' }">{{ t('col_vhosts') }}</div>
+          <div class="col-hdr" :style="{ left: BK_X + 'px',  width: BK_W + 'px'  }">{{ t('col_backends') }}</div>
 
           <!-- SVG: connection lines (below HTML nodes) -->
           <svg class="stage-svg" :width="CANVAS_W" :height="layout.h">
@@ -164,7 +164,7 @@
         class="conn-tooltip"
         :style="{ left: connTooltip.x + 'px', top: connTooltip.y + 'px' }"
       >
-        <div class="ct-title">연결된 location ({{ connTooltip.paths.length }}개)</div>
+        <div class="ct-title">{{ t('conn_tooltip_title', { n: connTooltip.paths.length }) }}</div>
         <div v-for="p in connTooltip.paths" :key="p" class="ct-path">{{ p }}</div>
       </div>
     </Teleport>
@@ -174,7 +174,10 @@
 
 <script setup>
 import { ref, computed } from 'vue'
+import { useI18n } from '../i18n/index.js'
 import { extractDiagramData } from '../utils/nginxDiagram.js'
+
+const { t } = useI18n()
 
 const props = defineProps({ ast: { type: Array, required: true } })
 
