@@ -215,7 +215,7 @@
         </div>
 
         <!-- Diagram Tab -->
-        <div v-if="parsed && !error && activeTab === 'diagram'" class="output-area summary-area">
+        <div v-if="parsed && !error && activeTab === 'diagram'" class="output-area diagram-area">
           <DiagramView :ast="ast" />
         </div>
       </div>
@@ -993,6 +993,13 @@ onMounted(() => {
 
 .summary-area {
   padding: 14px;
+}
+
+.diagram-area {
+  overflow: hidden;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 /* Indent selector */

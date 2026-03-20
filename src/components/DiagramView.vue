@@ -17,6 +17,12 @@
         <span class="toolbar-stat">
           {{ t('diagram_stat', { s: data.servers.length, b: data.backends.length }) }}
         </span>
+        <div class="toolbar-zoom">
+          <button class="zoom-btn" @click="zoomOut" title="Zoom out">−</button>
+          <span class="zoom-pct">{{ Math.round(vpScale * 100) }}%</span>
+          <button class="zoom-btn" @click="zoomIn" title="Zoom in">+</button>
+          <button class="zoom-btn zoom-reset" @click="resetView" title="Reset view">↺</button>
+        </div>
         <div class="toolbar-legend">
           <span class="leg"><span class="leg-dot" style="background:#f59e0b"></span>HTTPS</span>
           <span class="leg"><span class="leg-dot" style="background:#4ade80"></span>HTTP</span>
@@ -24,9 +30,19 @@
         </div>
       </div>
 
-      <!-- Scrollable diagram canvas -->
-      <div class="diagram-scroll">
-        <div class="diagram-stage" :style="{ width: CANVAS_W + 'px', height: layout.h + 'px' }" @click="selectedId = null">
+      <!-- Diagram viewport with zoom/pan -->
+      <div
+        ref="viewportRef"
+        class="diagram-viewport"
+        :class="{ 'is-panning': panning }"
+        @wheel.prevent="onViewportWheel"
+        @mousedown="onViewportMouseDown"
+        @mousemove="onViewportMouseMove"
+        @mouseup="onViewportMouseUp"
+        @mouseleave="onViewportMouseUp"
+      >
+        <div :style="transformStyle">
+          <div class="diagram-stage" :style="{ width: CANVAS_W + 'px', height: layout.h + 'px' }" @click="selectedId = null">
 
           <!-- Column headers -->
           <div class="col-hdr" :style="{ left: SRV_X + 'px', width: SRV_W + 'px' }">{{ t('col_vhosts') }}</div>
@@ -109,7 +125,7 @@
           <div
             v-for="srv in layout.servers" :key="srv.id"
             class="dg-node srv-node"
-            :class="[{ 'is-ssl': srv.isSSL }, nodeClass(srv)]"
+            :class="[{ 'is-ssl': srv.isSSL, 'has-no-conn': !srv.connections.length }, nodeClass(srv)]"
             :style="nodeStyle(srv)"
             @click.stop="selectNode(srv.id)"
           >
@@ -126,6 +142,7 @@
             <div class="node-badges">
               <span v-if="srv.hasStatic"  class="nbadge">📁 static</span>
               <span v-if="srv.hasInclude" class="nbadge">📋 include</span>
+              <span v-if="!srv.connections.length" class="nbadge nbadge-standalone">standalone</span>
             </div>
           </div>
 
@@ -148,13 +165,70 @@
               </template>
             </div>
             <div class="bk-host">{{ bk.host }}</div>
-            <div v-if="bk.isUpstream && bk.upstreamServers.length" class="bk-members">
+            <div v-if="bk.isUpstream" class="bk-upstream-toggle" @click.stop="toggleUpstream(bk.id)">
+              <span>{{ bk.upstreamServers.length }} servers</span>
+              <span class="toggle-icon">{{ expandedUpstreams.has(bk.id) ? '▲' : '▼' }}</span>
+            </div>
+            <div v-if="bk.isUpstream && expandedUpstreams.has(bk.id)" class="bk-members">
               <div v-for="s in bk.upstreamServers" :key="s" class="bk-member">{{ s }}</div>
             </div>
           </div>
 
+          </div>
         </div>
       </div>
+
+      <!-- Detail panel -->
+      <transition name="dp-fade">
+        <div v-if="selectedNode" class="detail-panel">
+          <button class="dp-close" @click="selectedId = null">✕</button>
+
+          <!-- Server detail -->
+          <template v-if="selectedNode.kind === 'server'">
+            <div class="dp-head">
+              <div class="dp-names">
+                <span v-for="n in selectedNode.node.serverNames" :key="n" class="dp-name">{{ n }}</span>
+              </div>
+              <div class="dp-ports">
+                <span v-for="p in selectedNode.node.listens" :key="p" class="port-tag" :class="{ ssl: isSslPort(p) }">{{ p }}</span>
+              </div>
+            </div>
+            <div v-if="selectedNode.node.locations && selectedNode.node.locations.length" class="dp-section">
+              <div class="dp-section-title">Locations ({{ selectedNode.node.locations.length }})</div>
+              <div v-for="loc in selectedNode.node.locations" :key="loc.path" class="dp-loc-row">
+                <span class="dp-loc-modifier" :class="`mod-${loc.modifier ?? 'prefix'}`">
+                  <span class="mod-sym">{{ modInfo(loc.modifier).symbol || '∅' }}</span>
+                  <span class="mod-lbl">{{ modInfo(loc.modifier).label }}</span>
+                </span>
+                <span class="dp-loc-path">{{ loc.cleanPath ?? loc.path }}</span>
+                <span class="dp-loc-badge" :class="`loc-${loc.type}`">{{ loc.type }}</span>
+                <span v-if="loc.target" class="dp-loc-target">{{ loc.target }}</span>
+              </div>
+            </div>
+          </template>
+
+          <!-- Backend detail -->
+          <template v-else-if="selectedNode.kind === 'backend'">
+            <div class="dp-head">
+              <span class="dp-bk-badge">{{ selectedNode.node.isUpstream ? 'upstream' : selectedNode.node.type }}</span>
+              <span class="dp-bk-host">{{ selectedNode.node.host }}</span>
+            </div>
+            <div v-if="selectedNode.node.isUpstream && selectedNode.node.upstreamServers.length" class="dp-section">
+              <div class="dp-section-title">Members ({{ selectedNode.node.upstreamServers.length }})</div>
+              <div v-for="s in selectedNode.node.upstreamServers" :key="s" class="dp-member">{{ s }}</div>
+            </div>
+            <div v-if="selectedNode.usedBy.length" class="dp-section">
+              <div class="dp-section-title">Used by</div>
+              <div v-for="s in selectedNode.usedBy" :key="s.id" class="dp-usedby-row">
+                <span class="dp-usedby-name">{{ s.serverNames[0] }}</span>
+                <div class="dp-ports">
+                  <span v-for="p in s.listens" :key="p" class="port-tag" :class="{ ssl: isSslPort(p) }">{{ p }}</span>
+                </div>
+              </div>
+            </div>
+          </template>
+        </div>
+      </transition>
     </template>
 
     <!-- Connection tooltip -->
@@ -173,9 +247,10 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, reactive } from 'vue'
 import { useI18n } from '../i18n/index.js'
 import { extractDiagramData } from '../utils/nginxDiagram.js'
+import { MODIFIER_LABELS } from '../utils/locationAnalyzer.js'
 
 const { t } = useI18n()
 
@@ -220,7 +295,8 @@ function srvHeight(srv) {
 }
 
 function bkHeight(bk) {
-  return 60 + (bk.isUpstream && bk.upstreamServers.length
+  const expanded = expandedUpstreams.has(bk.id)
+  return 60 + (bk.isUpstream && bk.upstreamServers.length && expanded
     ? bk.upstreamServers.length * 16 + 6
     : 0)
 }
@@ -302,6 +378,78 @@ function nodeStyle(node) {
   }
 }
 
+// ── Zoom / Pan ──────────────────────────────────────────────
+const viewportRef = ref(null)
+const vpScale     = ref(1)
+const vpX         = ref(0)
+const vpY         = ref(0)
+const panning     = ref(false)
+const panOrigin   = ref({ x: 0, y: 0 })
+
+const transformStyle = computed(() => ({
+  transform: `translate(${vpX.value}px, ${vpY.value}px) scale(${vpScale.value})`,
+  transformOrigin: '0 0',
+  willChange: 'transform',
+}))
+
+function onViewportWheel(e) {
+  const rect = viewportRef.value.getBoundingClientRect()
+  const mx = e.clientX - rect.left
+  const my = e.clientY - rect.top
+  const factor = e.deltaY < 0 ? 1.12 : 1 / 1.12
+  const newScale = Math.min(2.5, Math.max(0.25, vpScale.value * factor))
+  const ratio = newScale / vpScale.value
+  vpX.value = mx - (mx - vpX.value) * ratio
+  vpY.value = my - (my - vpY.value) * ratio
+  vpScale.value = newScale
+}
+
+function onViewportMouseDown(e) {
+  if (e.button !== 0) return
+  if (e.target.closest('.dg-node')) return
+  panning.value = true
+  panOrigin.value = { x: e.clientX - vpX.value, y: e.clientY - vpY.value }
+  e.preventDefault()
+}
+
+function onViewportMouseMove(e) {
+  if (!panning.value) return
+  vpX.value = e.clientX - panOrigin.value.x
+  vpY.value = e.clientY - panOrigin.value.y
+}
+
+function onViewportMouseUp() {
+  panning.value = false
+}
+
+function zoomIn() {
+  const vp = viewportRef.value
+  const cx = vp ? vp.clientWidth / 2 : 0
+  const cy = vp ? vp.clientHeight / 2 : 0
+  const newScale = Math.min(2.5, vpScale.value * 1.2)
+  const ratio = newScale / vpScale.value
+  vpX.value = cx - (cx - vpX.value) * ratio
+  vpY.value = cy - (cy - vpY.value) * ratio
+  vpScale.value = newScale
+}
+
+function zoomOut() {
+  const vp = viewportRef.value
+  const cx = vp ? vp.clientWidth / 2 : 0
+  const cy = vp ? vp.clientHeight / 2 : 0
+  const newScale = Math.max(0.25, vpScale.value / 1.2)
+  const ratio = newScale / vpScale.value
+  vpX.value = cx - (cx - vpX.value) * ratio
+  vpY.value = cy - (cy - vpY.value) * ratio
+  vpScale.value = newScale
+}
+
+function resetView() {
+  vpScale.value = 1
+  vpX.value = 0
+  vpY.value = 0
+}
+
 // ── Node selection / highlight ──────────────────────────────
 const selectedId = ref(null)
 
@@ -343,6 +491,25 @@ function nodeClass(node) {
   return inSet ? 'is-active' : 'is-dimmed'
 }
 
+// ── Selected node detail ─────────────────────────────────────
+const selectedNode = computed(() => {
+  const id = selectedId.value
+  if (!id) return null
+
+  const srv = layout.value.servers.find(s => s.id === id)
+  if (srv) return { kind: 'server', node: srv }
+
+  const bk = layout.value.backends.find(b => b.id === id)
+  if (bk) {
+    const usedBy = layout.value.servers.filter(s =>
+      s.connections.some(c => c.backendId === id)
+    )
+    return { kind: 'backend', node: bk, usedBy }
+  }
+
+  return null
+})
+
 // ── Connection tooltip ──────────────────────────────────────
 const connTooltip = ref(null)
 
@@ -357,6 +524,18 @@ function onConnMove(event) {
 function onConnLeave() {
   connTooltip.value = null
 }
+
+// ── Upstream toggle ──────────────────────────────────────────
+const expandedUpstreams = reactive(new Set())
+
+function toggleUpstream(id) {
+  expandedUpstreams.has(id) ? expandedUpstreams.delete(id) : expandedUpstreams.add(id)
+}
+
+// ── Location modifier helpers ────────────────────────────────
+function modInfo(modifier) {
+  return MODIFIER_LABELS[modifier] ?? { symbol: '∅', label: '접두사', color: '#60a5fa' }
+}
 </script>
 
 <style scoped>
@@ -364,6 +543,9 @@ function onConnLeave() {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  height: 100%;
+  padding: 14px;
+  box-sizing: border-box;
 }
 
 .empty {
@@ -412,10 +594,60 @@ function onConnLeave() {
 }
 
 /* Canvas */
-.diagram-scroll {
-  overflow-x: auto;
-  overflow-y: visible;
-  padding-bottom: 8px;
+.diagram-viewport {
+  overflow: hidden;
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  border: 1px solid #2a2a3a;
+  border-radius: 8px;
+  background: #0f0f17;
+  cursor: grab;
+  user-select: none;
+}
+
+.diagram-viewport.is-panning {
+  cursor: grabbing;
+}
+
+/* Toolbar zoom controls */
+.toolbar-zoom {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.zoom-btn {
+  background: #2a2a3a;
+  border: 1px solid #3a3a4f;
+  border-radius: 4px;
+  color: #9ca3af;
+  font-size: 14px;
+  line-height: 1;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+}
+
+.zoom-btn:hover {
+  background: #3a3a4f;
+  color: #d1d5db;
+}
+
+.zoom-reset {
+  font-size: 13px;
+}
+
+.zoom-pct {
+  font-size: 11px;
+  color: #6b7280;
+  min-width: 36px;
+  text-align: center;
+  font-family: 'JetBrains Mono', monospace;
 }
 
 .diagram-stage {
@@ -564,9 +796,225 @@ function onConnLeave() {
   font-family: 'JetBrains Mono', monospace;
   color: #6b7280;
 }
+
+/* Detail panel */
+.detail-panel {
+  position: relative;
+  background: #16161d;
+  border: 1px solid #2a2a3a;
+  border-radius: 8px;
+  padding: 14px 16px;
+  font-size: 12px;
+}
+
+.dp-close {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  background: none;
+  border: none;
+  color: #4b5563;
+  font-size: 13px;
+  cursor: pointer;
+  padding: 2px 4px;
+  line-height: 1;
+}
+
+.dp-close:hover { color: #9ca3af; }
+
+.dp-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding-right: 24px;
+}
+
+.dp-names {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.dp-name {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  font-weight: 700;
+  color: #d1d5db;
+}
+
+.dp-ports {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.dp-bk-badge {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #4ade80;
+  background: rgba(74,222,128,0.1);
+  border: 1px solid rgba(74,222,128,0.25);
+  border-radius: 4px;
+  padding: 2px 7px;
+}
+
+.dp-bk-host {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  font-weight: 700;
+  color: #d1d5db;
+}
+
+.dp-section {
+  margin-top: 4px;
+}
+
+.dp-section + .dp-section {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #2a2a3a;
+}
+
+.dp-section-title {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: #4b5563;
+  margin-bottom: 6px;
+}
+
+.dp-loc-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 0;
+  border-bottom: 1px solid #1e1e2a;
+}
+
+.dp-loc-row:last-child { border-bottom: none; }
+
+.dp-loc-path {
+  font-family: 'JetBrains Mono', monospace;
+  color: #93c5fd;
+  min-width: 120px;
+  flex-shrink: 0;
+}
+
+.dp-loc-badge {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-radius: 3px;
+  padding: 1px 5px;
+  flex-shrink: 0;
+}
+
+.loc-proxy  { background: rgba(74,222,128,0.1);  color: #4ade80; border: 1px solid rgba(74,222,128,0.2); }
+.loc-alias  { background: rgba(167,139,250,0.1); color: #a78bfa; border: 1px solid rgba(167,139,250,0.2); }
+.loc-static { background: rgba(251,191,36,0.1);  color: #fbbf24; border: 1px solid rgba(251,191,36,0.2); }
+.loc-return { background: rgba(248,113,113,0.1); color: #f87171; border: 1px solid rgba(248,113,113,0.2); }
+.loc-other  { background: #2a2a3a; color: #6b7280; border: 1px solid #3a3a4f; }
+
+.dp-loc-target {
+  font-family: 'JetBrains Mono', monospace;
+  color: #6b7280;
+  font-size: 11px;
+  word-break: break-all;
+}
+
+.dp-member {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: #6b7280;
+  padding: 2px 0;
+}
+
+.dp-usedby-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 0;
+}
+
+.dp-usedby-name {
+  font-family: 'JetBrains Mono', monospace;
+  color: #d1d5db;
+  font-size: 12px;
+}
+
+/* Feature 5 — static-only server */
+.srv-node.has-no-conn {
+  border-left-color: #4b5563;
+  opacity: 0.75;
+}
+.nbadge-standalone {
+  color: #4b5563;
+  font-style: italic;
+}
+
+/* Feature 6 — upstream toggle */
+.bk-upstream-toggle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  font-size: 11px;
+  color: #6b7280;
+  padding: 2px 0;
+}
+.bk-upstream-toggle:hover { color: #9ca3af; }
+.toggle-icon { font-size: 9px; }
+
+/* Location modifier badges */
+.dp-loc-modifier {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 4px;
+  padding: 2px 6px;
+  flex-shrink: 0;
+  min-width: 96px;
+  font-size: 10px;
+  line-height: 1.4;
+}
+.mod-sym {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  font-size: 11px;
+  min-width: 14px;
+  text-align: center;
+  flex-shrink: 0;
+}
+.mod-lbl {
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+.mod-exact           { background: rgba(248,113,113,0.1); color: #f87171; border: 1px solid rgba(248,113,113,0.25); }
+.mod-prefix_priority { background: rgba(251,146,60,0.1);  color: #fb923c; border: 1px solid rgba(251,146,60,0.25); }
+.mod-regex_cs        { background: rgba(250,204,21,0.1);  color: #facc15; border: 1px solid rgba(250,204,21,0.3); }
+.mod-regex_ci        { background: rgba(250,204,21,0.07); color: #fde047; border: 1px solid rgba(250,204,21,0.2); }
+.mod-prefix          { background: rgba(96,165,250,0.1);  color: #60a5fa; border: 1px solid rgba(96,165,250,0.2); }
+.mod-named           { background: rgba(107,114,128,0.1); color: #9ca3af; border: 1px solid rgba(107,114,128,0.2); }
 </style>
 
 <style>
+/* Detail panel transition */
+.dp-fade-enter-active,
+.dp-fade-leave-active {
+  transition: opacity 0.18s, transform 0.18s;
+}
+.dp-fade-enter-from,
+.dp-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-6px);
+}
+
 /* Connection tooltip — unscoped (Teleport to body) */
 .conn-tooltip {
   position: fixed;

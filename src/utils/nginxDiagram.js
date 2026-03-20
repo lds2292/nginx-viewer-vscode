@@ -3,6 +3,17 @@
  * 서버 블록, 백엔드(proxy_pass/alias 대상), upstream, 연결 관계 추출
  */
 
+function parseLocationModifier(params) {
+  if (!params || !params.length) return { modifier: 'prefix', cleanPath: '' }
+  const first = params[0]
+  if (first === '=')          return { modifier: 'exact',           cleanPath: params.slice(1).join(' ') || '/' }
+  if (first === '^~')         return { modifier: 'prefix_priority', cleanPath: params.slice(1).join(' ') || '/' }
+  if (first === '~*')         return { modifier: 'regex_ci',        cleanPath: params.slice(1).join(' ') || '/' }
+  if (first === '~')          return { modifier: 'regex_cs',        cleanPath: params.slice(1).join(' ') || '/' }
+  if (first.startsWith('@'))  return { modifier: 'named',           cleanPath: first }
+  return { modifier: 'prefix', cleanPath: params.join(' ') || '/' }
+}
+
 export function extractDiagramData(ast) {
   const upstreamMap = new Map() // name → string[]
   const backendMap  = new Map() // key → backend node  (proxy: host, alias: path)
@@ -57,20 +68,27 @@ export function extractDiagramData(ast) {
     const connMap  = new Map() // backendId → { backendId, paths[] }
     let hasStatic  = false
 
+    const locations = []
+
     for (const child of node.children) {
       if (child.type !== 'block' || child.name !== 'location') continue
       const path = child.params.join(' ')
+      const { modifier, cleanPath } = parseLocationModifier(child.params)
 
-      const proxyDir = child.children.find(c => c.type === 'directive' && c.name === 'proxy_pass')
-      const aliasDir = child.children.find(c => c.type === 'directive' && c.name === 'alias')
+      const proxyDir  = child.children.find(c => c.type === 'directive' && c.name === 'proxy_pass')
+      const aliasDir  = child.children.find(c => c.type === 'directive' && c.name === 'alias')
+      const rootDir   = child.children.find(c => c.type === 'directive' && c.name === 'root')
+      const returnDir = child.children.find(c => c.type === 'directive' && c.name === 'return')
 
       if (proxyDir) {
-        const host = normalizeHost(proxyDir.values.join(' '))
+        const raw  = proxyDir.values.join(' ')
+        const host = normalizeHost(raw)
         if (host) {
           const bk = getBackend(host, 'proxy')
           if (!connMap.has(bk.id)) connMap.set(bk.id, { backendId: bk.id, paths: [] })
           connMap.get(bk.id).paths.push(path)
         }
+        locations.push({ path, modifier, cleanPath, type: 'proxy', target: raw })
       } else if (aliasDir) {
         const aliasPath = aliasDir.values.join(' ')
         if (aliasPath) {
@@ -78,10 +96,17 @@ export function extractDiagramData(ast) {
           if (!connMap.has(bk.id)) connMap.set(bk.id, { backendId: bk.id, paths: [] })
           connMap.get(bk.id).paths.push(path)
         }
+        locations.push({ path, modifier, cleanPath, type: 'alias', target: aliasPath })
+      } else if (returnDir) {
+        locations.push({ path, modifier, cleanPath, type: 'return', target: returnDir.values.join(' ') })
+      } else if (rootDir) {
+        hasStatic = true
+        locations.push({ path, modifier, cleanPath, type: 'static', target: rootDir.values.join(' ') })
       } else {
         if (child.children.some(c => c.type === 'directive' && c.name === 'root')) {
           hasStatic = true
         }
+        locations.push({ path, modifier, cleanPath, type: 'other', target: null })
       }
     }
 
@@ -92,6 +117,7 @@ export function extractDiagramData(ast) {
       isSSL,
       hasStatic,
       hasInclude,
+      locations,
       connections: [...connMap.values()],
     })
   }
