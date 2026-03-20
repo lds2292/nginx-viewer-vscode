@@ -295,6 +295,13 @@ export function summarize(ast) {
   const summary = {
     worker: {},
     gzip: null,
+    gzipDetails: {},
+    httpGlobal: {},
+    httpIncludes: [],
+    rateLimiting: { reqZones: [], connZones: [] },
+    cache: {},
+    logging: { formats: [], accessLog: null, errorLog: null },
+    maps: [],
     virtualHosts: [],
     upstreams: [],
     locations: [],
@@ -306,18 +313,90 @@ export function summarize(ast) {
     if (n.type === 'directive' && n.name === 'worker_processes') {
       summary.worker.processes = n.values.join(' ')
     }
+    if (n.type === 'directive' && n.name === 'worker_rlimit_nofile') {
+      summary.worker.rlimitNofile = n.values.join(' ')
+    }
+    if (n.type === 'directive' && n.name === 'error_log') {
+      summary.logging.errorLog = n.values.join(' ')
+    }
   }
 
-  // worker_connections inside events {}
+  // worker_connections, use, multi_accept inside events {}
   walkBlocks(ast, 'events', b => {
     const wc = findDirective(b.children, 'worker_connections')
     if (wc) summary.worker.connections = wc
+    const use = findDirective(b.children, 'use')
+    if (use) summary.worker.eventModel = use
+    const ma = findDirective(b.children, 'multi_accept')
+    if (ma) summary.worker.multiAccept = ma
   })
 
   // Gzip — find anywhere
   walkAll(ast, n => {
     if (n.type === 'directive' && n.name === 'gzip' && summary.gzip === null) {
       summary.gzip = n.values[0] || 'on'
+    }
+  })
+
+  const HTTP_GLOBAL_DIRS = [
+    'default_type',
+    'sendfile', 'tcp_nopush', 'tcp_nodelay', 'reset_timedout_connection',
+    'keepalive_timeout', 'keepalive_requests',
+    'client_body_buffer_size', 'client_header_buffer_size', 'large_client_header_buffers',
+    'client_max_body_size', 'client_body_timeout', 'client_header_timeout', 'send_timeout',
+    'charset', 'server_tokens',
+  ]
+
+  const GZIP_DETAIL_DIRS = [
+    'gzip_vary', 'gzip_proxied', 'gzip_comp_level', 'gzip_buffers',
+    'gzip_http_version', 'gzip_min_length', 'gzip_types',
+  ]
+
+  // HTTP-level global directives, gzip details, rate limiting, cache, logging
+  walkBlocks(ast, 'http', b => {
+    for (const name of HTTP_GLOBAL_DIRS) {
+      const val = findDirective(b.children, name)
+      if (val !== null) summary.httpGlobal[name] = val
+    }
+    for (const name of GZIP_DETAIL_DIRS) {
+      const val = findDirective(b.children, name)
+      if (val !== null) summary.gzipDetails[name] = val
+    }
+    for (const n of b.children) {
+      if (n.type === 'directive' && n.name === 'limit_req_zone') {
+        summary.rateLimiting.reqZones.push(n.values.join(' '))
+      }
+      if (n.type === 'directive' && n.name === 'limit_conn_zone') {
+        summary.rateLimiting.connZones.push(n.values.join(' '))
+      }
+      if (n.type === 'directive' && n.name === 'log_format') {
+        summary.logging.formats.push(n.values[0])
+      }
+    }
+    const cachePath = findDirective(b.children, 'proxy_cache_path')
+    if (cachePath) summary.cache.path = cachePath
+    const cacheKey = findDirective(b.children, 'proxy_cache_key')
+    if (cacheKey) summary.cache.key = cacheKey
+    const accessLog = findDirective(b.children, 'access_log')
+    if (accessLog) summary.logging.accessLog = accessLog
+    // http-level include directives
+    for (const n of b.children) {
+      if (n.type === 'include') summary.httpIncludes.push(n.pattern)
+    }
+    // map blocks
+    for (const n of b.children) {
+      if (n.type === 'block' && n.name === 'map') {
+        const defaultEntry = findDirective(n.children, 'default')
+        const entries = n.children
+          .filter(c => c.type === 'directive' && c.name !== 'default')
+          .map(c => ({ pattern: c.name, value: c.values.join(' ') }))
+        summary.maps.push({
+          source: n.params[0] || '',
+          variable: n.params[1] || '',
+          default: defaultEntry,
+          entries,
+        })
+      }
     }
   })
 
