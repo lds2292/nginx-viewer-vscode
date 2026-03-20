@@ -1,0 +1,51 @@
+{
+  "name": "nginx-viewer",
+  "displayName": "Nginx Config Viewer",
+  "description": "Visualize nginx.conf with tree, summary, lint, location analyzer, and diagram.",
+  "version": "0.0.1",
+  "publisher": "YOUR_PUBLISHER_ID",
+  "private": true,
+  "engines": { "vscode": "^1.85.0" },
+  "categories": ["Visualization", "Other"],
+  "activationEvents": [],
+  "main": "./extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "nginx-viewer.open",
+        "title": "Open in Nginx Viewer"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "nginx-viewer.open",
+          "when": "resourceExtname == .conf || resourceFilename =~ /nginx/",
+          "group": "navigation"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "nginx-viewer.open",
+          "when": "resourceExtname == .conf || resourceFilename =~ /nginx/",
+          "group": "navigation"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "package": "npm run build && vsce package",
+    "publish": "vsce publish"
+  },
+  "dependencies": {
+    "vue": "^3.4.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.0.0",
+    "vite": "^5.0.0",
+    "@vscode/vsce": "^2.24.0"
+  }
+}

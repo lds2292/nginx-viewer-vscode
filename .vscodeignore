@@ -1,0 +1,12 @@
+.git
+.git/**
+.idea
+.idea/**
+src/**
+utils/**
+index.html
+vite.config.js
+node_modules/**
+VSCODE_EXTENSION_PROMPT.md
+.vscodeignore
+webview/dist/**
