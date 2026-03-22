@@ -8,5 +8,5 @@ index.html
 vite.config.js
 node_modules/**
 VSCODE_EXTENSION_PROMPT.md
+LOCALIZATION_PLAN.md
 .vscodeignore
-webview/dist/**
